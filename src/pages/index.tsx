@@ -1,4 +1,6 @@
+// pages/index.tsx
 import { getflight, gethotel } from "@/api";
+import RecommendationPanel from "@/components/Recommendations/RecommendationPanel";
 import Loader from "@/components/Loader";
 import { SearchSelect } from "@/components/SearchSelect";
 import SignupDialog from "@/components/SignupDialog";
@@ -34,19 +36,7 @@ export default function Home() {
   const [flight, setflight] = useState<any[]>([]);
   const user = useSelector((state: any) => state.user.user);
   const router = useRouter();
-  const flightD = [
-    { id: 1, from: "Delhi", to: "Mumbai", date: "2025-01-15", price: 5000 },
-    { id: 2, from: "Mumbai", to: "Bengaluru", date: "2025-01-16", price: 4500 },
-    { id: 3, from: "Bengaluru", to: "Delhi", date: "2025-01-17", price: 5500 },
-    { id: 4, from: "Delhi", to: "Kolkata", date: "2025-01-18", price: 6000 },
-  ];
 
-  const hotelData = [
-    { id: 1, name: "Luxury Palace", city: "Mumbai", price: 15000 },
-    { id: 2, name: "Comfort Inn", city: "Delhi", price: 8000 },
-    { id: 3, name: "Seaside Resort", city: "Goa", price: 12000 },
-    { id: 4, name: "Mountain View Hotel", city: "Shimla", price: 10000 },
-  ];
   const offers = [
     {
       title: "Domestic Flights",
@@ -122,89 +112,110 @@ export default function Home() {
     const fetchdata = async () => {
       try {
         const data = await gethotel();
-        sethotel(data);
+        sethotel(Array.isArray(data) ? data : []);
         const flightdata = await getflight();
-        setflight(flightdata);
+        setflight(Array.isArray(flightdata) ? flightdata : []);
       } catch (error) {
         console.error(error);
+        sethotel([]);
+        setflight([]);
       } finally {
         setloading(false);
       }
     };
-
     fetchdata();
   }, [user]);
 
-  const cityOptions = useMemo(() => {
+  // ── FIX: separate city options per booking type ──────────────────────────
+  const flightCityOptions = useMemo(() => {
     const cities = new Set<string>();
-    flight.forEach((flight) => {
-      cities.add(flight.from);
-      cities.add(flight.to);
+    flight.forEach((f) => {
+      cities.add(f.from);
+      cities.add(f.to);
     });
-    hotel.forEach((hotel) => {
-      cities.add(hotel.location);
-    });
-    return Array.from(cities).map((city) => ({ value: city, label: city }));
-  }, [flight, hotel]);
+    return Array.from(cities).map((c) => ({ value: c, label: c }));
+  }, [flight]);
 
-  if (loading) {
-    return <Loader />;
-  }
+  const hotelCityOptions = useMemo(() => {
+    const cities = new Set<string>();
+    hotel.forEach((h) => {
+      cities.add(h.location);
+    });
+    return Array.from(cities).map((c) => ({ value: c, label: c }));
+  }, [hotel]);
+
+  const cityOptions =
+    bookingtype === "flights" ? flightCityOptions : hotelCityOptions;
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // Reset search fields when switching booking type
+  const handleBookingTypeChange = (type: string) => {
+    setbookingtype(type);
+    setfrom("");
+    setto("");
+    setsearchresult([]);
+  };
+
+  if (loading) return <Loader />;
+
   const handlesearch = () => {
     if (bookingtype === "flights") {
       const results = flight.filter(
-        (FLIGHT) =>
-          FLIGHT.from.toLowerCase() === from.toLowerCase() &&
-          FLIGHT.to.toLowerCase() === to.toLowerCase()
+        (f) =>
+          f.from.toLowerCase() === from.toLowerCase() &&
+          f.to.toLowerCase() === to.toLowerCase(),
       );
       setsearchresult(results);
-    } else if (bookingtype === "hotels") {
+    } else {
       const results = hotel.filter(
-        (hotel) => hotel.location.toLowerCase() === to.toLowerCase()
+        (h) => h.location.toLowerCase() === to.toLowerCase(),
       );
       setsearchresult(results);
     }
   };
+
   const formatDate = (dateString: string): string => {
-    const options: Intl.DateTimeFormatOptions = {
+    const date = new Date(dateString);
+    return date.toLocaleString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    };
-    const date = new Date(dateString);
-    return date.toLocaleString("en-US", options);
+    });
   };
+
   const handlebooknow = (id: any) => {
-    if (bookingtype === "flights") {
-      router.push(`/book-flight/${id}`);
-    } else {
-      router.push(`/book-hotel/${id}`);
-    }
+    if (bookingtype === "flights") router.push(`/book-flight/${id}`);
+    else router.push(`/book-hotel/${id}`);
   };
+
   return (
     <div
       className="min-h-screen bg-cover bg-center bg-no-repeat"
       style={{
         backgroundImage:
-          'url("https://images.unsplash.com/photo-1464037866556-6812c9d1c72e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2940&q=80")',
+          'url("https://images.unsplash.com/photo-1464037866556-6812c9d1c72e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2940&q=80")',
       }}
     >
       <main className="container mx-auto px-4 py-6">
+        {/* Nav */}
+	    <div className="max-w-5xl mx-auto mb-6">
+		    <RecommendationPanel variant="compact" />
+	    </div>
         <nav className="bg-white rounded-xl shadow-lg mx-auto max-w-5xl mb-6 p-4 overflow-x-auto">
           <div className="flex justify-between items-center min-w-max space-x-8">
             <NavItem
               icon={<Plane />}
               text="Flights"
               active={bookingtype === "flights"}
-              onClick={() => setbookingtype("flights")}
+              onClick={() => handleBookingTypeChange("flights")}
             />
             <NavItem
               icon={<Hotel />}
               text="Hotels"
               active={bookingtype === "hotels"}
-              onClick={() => setbookingtype("hotels")}
+              onClick={() => handleBookingTypeChange("hotels")}
             />
             <NavItem icon={<HomeIcon />} text="Homestays" />
             <NavItem icon={<Umbrella />} text="Holiday" />
@@ -216,6 +227,7 @@ export default function Home() {
           </div>
         </nav>
 
+        {/* Search box */}
         <div className="bg-white rounded-xl shadow-lg mx-auto max-w-5xl p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {bookingtype === "flights" && (
@@ -251,10 +263,8 @@ export default function Home() {
                 icon={<Calendar className="text-gray-400" />}
                 placeholder="Date"
                 value={date}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setdate(e.target.value)
-                }
-                subtitle="Select a date"
+                onChange={(e: any) => setdate(e.target.value)}
+                subtitle="Select date"
                 type="date"
               />
             </div>
@@ -263,83 +273,82 @@ export default function Home() {
               <SearchInput
                 icon={<Users className="text-gray-400" />}
                 placeholder="Travelers"
-                value={travelers.toString()}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  settravelers(parseInt(e.target.value) || 1)
-                }
-                subtitle="Number of travelers"
+                value={travelers}
+                onChange={(e: any) => settravelers(Number(e.target.value))}
+                subtitle="Add travelers"
                 type="number"
               />
             </div>
 
-            <Button className="col-span-1 h-full" onClick={handlesearch}>
-              SEARCH
-            </Button>
+            <div className="col-span-1 flex items-center">
+              <Button
+                onClick={handlesearch}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white h-full min-h-[60px] rounded-lg font-semibold"
+              >
+                Search
+              </Button>
+            </div>
           </div>
-          <div className="mt-6">
+        </div>
+
+        {/* Search results */}
+        {searchresults.length > 0 && (
+          <div className="mx-auto max-w-5xl mt-6">
             <h2 className="text-xl font-semibold mb-4 text-white">
               Search Results
             </h2>
-            {searchresults.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {searchresults.map((result) => (
-                  <div
-                    key={result.id}
-                    className="bg-white rounded-lg shadow p-4 border border-gray-200"
-                  >
-                    {bookingtype === "flights" ? (
-                      <>
-                        <p className="font-semibold text-lg">
-                          Flight Name: {result.flightName}
-                        </p>
-                        <h3 className="font-semibold text-lg">
-                          {result.from} to {result.to}
-                        </h3>
-                        <p className="text-gray-600">
-                          Departure Time: {formatDate(result.departureTime)}
-                        </p>
-                        <p className="text-gray-600">
-                          Arrival Time: {formatDate(result.arrivalTime)}
-                        </p>
-                        <p className="text-lg font-bold mt-2">
-                          ₹{result.price}
-                        </p>
-                        <Button
-                          className="w-full mt-4"
-                          onClick={() => handlebooknow(result.id)}
-                        >
-                          Book Now
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <h3 className="font-semibold text-lg">
-                          {result.hotelName}
-                        </h3>
-                        <p className="text-gray-600">City: {result.location}</p>
-                        <p className="text-lg font-bold mt-2">
-                          ₹{result.pricePerNight} per night
-                        </p>
-                        <Button
-                          className="w-full mt-4"
-                          onClick={() => handlebooknow(result.id)}
-                        >
-                          Book Now
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-600">
-                No {bookingtype} available for the selected criteria.
-              </p>
-            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {searchresults.map((result) => (
+                <div
+                  key={result._id || result.id}
+                  className="bg-white rounded-lg shadow p-4 border border-gray-200"
+                >
+                  {bookingtype === "flights" ? (
+                    <>
+                      <p className="font-semibold text-lg">
+                        {result.flightName}
+                      </p>
+                      <h3 className="font-semibold text-lg">
+                        {result.from} → {result.to}
+                      </h3>
+                      <p className="text-gray-600 text-sm">
+                        Departs: {formatDate(result.departureTime)}
+                      </p>
+                      <p className="text-gray-600 text-sm">
+                        Arrives: {formatDate(result.arrivalTime)}
+                      </p>
+                      <p className="text-lg font-bold mt-2">₹{result.price}</p>
+                      <Button
+                        className="w-full mt-4"
+                        onClick={() => handlebooknow(result._id || result.id)}
+                      >
+                        Book Now
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="font-semibold text-lg">
+                        {result.hotelName}
+                      </h3>
+                      <p className="text-gray-600">City: {result.location}</p>
+                      <p className="text-lg font-bold mt-2">
+                        ₹{result.pricePerNight} per night
+                      </p>
+                      <Button
+                        className="w-full mt-4"
+                        onClick={() => handlebooknow(result._id || result.id)}
+                      >
+                        Book Now
+                      </Button>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
+
         <div className="max-w-7xl mx-auto px-4">
-          {/* Offers Section */}
           <section className="my-16">
             <h2 className="text-2xl font-bold mb-8 text-white">Best Offers</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -349,132 +358,120 @@ export default function Home() {
             </div>
           </section>
 
-          {/* Collections Section */}
           <section className="my-16">
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-2xl font-bold text-white">
-                Handpicked Collections for You
-              </h2>
-            </div>
+            <h2 className="text-2xl font-bold mb-8 text-white">
+              Handpicked Collections for You
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {collections.map((collection, index) => (
-                <CollectionCard key={index} {...collection} />
+              {collections.map((c, i) => (
+                <CollectionCard key={i} {...c} />
               ))}
             </div>
           </section>
 
-          {/* Wonders Section */}
           <section className="my-16">
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-2xl font-bold text-white">
-                Unlock Lesser-Known <span></span> Wonders of India
-              </h2>
-            </div>
+            <h2 className="text-2xl font-bold mb-8 text-white">
+              Unlock Lesser-Known Wonders of India
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {wonders.map((wonder, index) => (
-                <WonderCard key={index} {...wonder} />
+              {wonders.map((w, i) => (
+                <WonderCard key={i} {...w} />
               ))}
             </div>
           </section>
 
-          {/* Download App Section */}
           <DownloadApp />
         </div>
       </main>
     </div>
   );
 }
-const OfferCard = ({ title, description, imageUrl }: any) => {
-  return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden">
-      <img src={imageUrl} alt={title} className="w-full h-48 object-cover" />
-      <div className="p-4">
-        <h3 className="font-semibold text-lg mb-2">{title}</h3>
-        <p className="text-gray-600 text-sm">{description}</p>
-        <button className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-          Book Now
-        </button>
-      </div>
-    </div>
-  );
-};
 
-const CollectionCard = ({ title, imageUrl, tag }: any) => {
-  return (
-    <div className="relative group cursor-pointer overflow-hidden rounded-lg">
-      <img
-        src={imageUrl}
-        alt={title}
-        className="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-110"
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/70">
-        <div className="absolute top-4 left-4">
-          <span className="bg-white text-black text-sm font-semibold px-2 py-1 rounded">
-            {tag}
-          </span>
-        </div>
-        <div className="absolute bottom-4 left-4 right-4">
-          <h3 className="text-white text-lg font-semibold">{title}</h3>
-        </div>
-      </div>
-    </div>
-  );
-};
-const DownloadApp = () => {
-  return (
-    <div className="bg-white p-6 rounded-lg shadow-md max-w-7xl mx-auto my-12">
-      <div className="flex flex-col md:flex-row items-center justify-between">
-        <div className="mb-6 md:mb-0">
-          <h3 className="text-xl font-bold mb-2">Download App Now!</h3>
-          <p className="text-gray-600 mb-4">
-            Get India's #1 travel super app with best deals on flights
-          </p>
-          <div className="flex space-x-4">
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg"
-              alt="App Store"
-              className="h-10"
-            />
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg"
-              alt="Play Store"
-              className="h-10"
-            />
-          </div>
-        </div>
-        <div className="flex items-center space-x-4">
-          <QrCode className="w-24 h-24" />
-          <p className="text-sm text-gray-600">
-            Scan QR code to download the app
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-};
+// ── Sub-components (unchanged visually) ─────────────────────────────────────
 
-const WonderCard = ({ title, imageUrl }: any) => {
-  return (
-    <div className="relative group cursor-pointer overflow-hidden rounded-lg">
-      <img
-        src={imageUrl}
-        alt={title}
-        className="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-110"
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/70">
-        <div className="absolute bottom-4 left-4 right-4">
-          <h3 className="text-white text-lg font-semibold">{title}</h3>
-        </div>
+const OfferCard = ({ title, description, imageUrl }: any) => (
+  <div className="bg-white rounded-lg shadow-md overflow-hidden">
+    <img src={imageUrl} alt={title} className="w-full h-48 object-cover" />
+    <div className="p-4">
+      <h3 className="font-semibold text-lg mb-2">{title}</h3>
+      <p className="text-gray-600 text-sm">{description}</p>
+      <button className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+        Book Now
+      </button>
+    </div>
+  </div>
+);
+
+const CollectionCard = ({ title, imageUrl, tag }: any) => (
+  <div className="relative group cursor-pointer overflow-hidden rounded-lg">
+    <img
+      src={imageUrl}
+      alt={title}
+      className="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-110"
+    />
+    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/70">
+      <div className="absolute top-4 left-4">
+        <span className="bg-white text-black text-sm font-semibold px-2 py-1 rounded">
+          {tag}
+        </span>
+      </div>
+      <div className="absolute bottom-4 left-4 right-4">
+        <h3 className="text-white text-lg font-semibold">{title}</h3>
       </div>
     </div>
-  );
-};
+  </div>
+);
+
+const WonderCard = ({ title, imageUrl }: any) => (
+  <div className="relative group cursor-pointer overflow-hidden rounded-lg">
+    <img
+      src={imageUrl}
+      alt={title}
+      className="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-110"
+    />
+    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/70">
+      <div className="absolute bottom-4 left-4 right-4">
+        <h3 className="text-white text-lg font-semibold">{title}</h3>
+      </div>
+    </div>
+  </div>
+);
+
+const DownloadApp = () => (
+  <div className="bg-white p-6 rounded-lg shadow-md max-w-7xl mx-auto my-12">
+    <div className="flex flex-col md:flex-row items-center justify-between">
+      <div className="mb-6 md:mb-0">
+        <h3 className="text-xl font-bold mb-2">Download App Now!</h3>
+        <p className="text-gray-600 mb-4">
+          Get India's #1 travel super app with best deals on flights
+        </p>
+        <div className="flex space-x-4">
+          <img
+            src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg"
+            alt="App Store"
+            className="h-10"
+          />
+          <img
+            src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg"
+            alt="Play Store"
+            className="h-10"
+          />
+        </div>
+      </div>
+      <div className="flex items-center space-x-4">
+        <QrCode className="w-24 h-24" />
+        <p className="text-sm text-gray-600">
+          Scan QR code to download the app
+        </p>
+      </div>
+    </div>
+  </div>
+);
+
 function NavItem({ icon, text, active = false, onClick }: any) {
   return (
     <button
-      className={`flex flex-col items-center p-2 rounded-lg transition-colors ${
-        active ? "text-blue-500" : "text-gray-600 hover:text-blue-500"
-      }`}
+      className={`flex flex-col items-center p-2 rounded-lg transition-colors ${active ? "text-blue-500" : "text-gray-600 hover:text-blue-500"}`}
       onClick={onClick}
     >
       {icon}

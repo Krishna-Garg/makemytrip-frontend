@@ -13,7 +13,7 @@ import { Input } from "./ui/input";
 import { signup, login } from "../api";
 import { setUser } from "@/store";
 import { useDispatch } from "react-redux";
-const SignupDialog = ({trigger}:any) => {
+const SignupDialog = ({ trigger }: any) => {
   const [isSignup, setIsSignup] = useState(true);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -31,7 +31,7 @@ const SignupDialog = ({trigger}:any) => {
           lastName,
           email,
           phoneNumber,
-          password
+          password,
         );
         dispatch(setUser(signin));
       } catch (error) {
@@ -57,9 +57,7 @@ const SignupDialog = ({trigger}:any) => {
   };
   return (
     <Dialog open={open} onOpenChange={setopem}>
-      <DialogTrigger asChild>
-        {trigger}
-      </DialogTrigger>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="sm:max-w-[425px] bg-white">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">

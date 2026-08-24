@@ -4,6 +4,7 @@ import Head from "next/head";
 import store, { setUser } from "@/store";
 import { Provider } from "react-redux";
 import Navbar from "@/components/Navbar";
+import StickyTopBar from "@/components/FlightTracker/StickyTopBar";
 
 import { useEffect } from "react";
 import Footer from "@/components/Fotter";
@@ -17,9 +18,10 @@ const Myapp = ({ Component, pageProps }: AppProps) => {
   }, []);
   return (
     <div className="min-h-screen ">
+      <StickyTopBar />
       <Navbar />
       <Component {...pageProps} />
-      <Footer/>
+      <Footer />
     </div>
   );
 };

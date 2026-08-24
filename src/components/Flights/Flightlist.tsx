@@ -13,6 +13,7 @@ import Loader from "../Loader";
 const FlightList = ({ onSelect }: any) => {
   const [flight, setflight] = useState<any[]>([]);
   const [loading, setloading] = useState(true);
+
   useEffect(() => {
     const fetchflight = async () => {
       try {
@@ -26,7 +27,7 @@ const FlightList = ({ onSelect }: any) => {
     };
     fetchflight();
   }, []);
-  
+
   if (loading) {
     return <Loader />;
   }
