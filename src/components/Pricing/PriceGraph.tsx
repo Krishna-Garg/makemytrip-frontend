@@ -21,10 +21,17 @@ export default function PriceGraph({ flightId }: Props) {
 
   if (loading) return <p className="text-sm text-gray-400">Loading price history...</p>;
   if (history.length === 0) return (
-    <p className="text-sm text-gray-400">
-      Price history will appear here once the engine has logged at least one snapshot.
-    </p>
+    <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-100 rounded-xl text-sm">
+      <TrendingUp className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+      <div>
+        <p className="font-medium text-blue-700">Price tracking just started</p>
+        <p className="text-blue-500 text-xs mt-0.5">
+          History builds automatically every hour. Check back soon to see price trends for this flight.
+        </p>
+      </div>
+    </div>
   );
+
 
   const chartData = history.map((s) => ({
     time: new Date(s.timestamp).toLocaleString("en-IN", {

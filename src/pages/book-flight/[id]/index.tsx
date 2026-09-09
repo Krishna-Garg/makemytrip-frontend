@@ -51,6 +51,7 @@ const BookFlightPage = () => {
   const [finalPrice, setFinalPrice] = useState<number>(0);
   const [selectedSeats, setSelectedSeats] = useState<any[]>([]);
   const [seatsConfirmed, setSeatsConfirmed] = useState(false);
+  const [trackMsg, setTrackMsg] = useState("");
 
   const user = useSelector((state: any) => state.user.user);
   const dispatch = useDispatch();
@@ -99,8 +100,11 @@ const BookFlightPage = () => {
     const stored = JSON.parse(localStorage.getItem("trackedFlights") || "[]");
     if (!stored.includes(flightId)) {
       localStorage.setItem("trackedFlights", JSON.stringify([...stored, flightId]));
+      setTrackMsg(`Now tracking ${flight.flightName} — check the status bar above.`);
+    } else {
+      setTrackMsg(`${flight.flightName} is already being tracked.`);
     }
-    alert(`Now tracking ${flight.flightName}. Check the status bar at the top.`);
+    setTimeout(() => setTrackMsg(""), 4000);
   };
 
   // Use seat prices if seats selected, otherwise dynamic price
@@ -427,6 +431,12 @@ const BookFlightPage = () => {
                 className="w-full border border-blue-600 text-blue-600 py-2 rounded-lg hover:bg-blue-50 transition-colors text-sm font-medium">
                 Track This Flight
               </button>
+              {trackMsg && (
+               <div className="text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200 text-center">
+                  {trackMsg}
+               </div>
+              )}
+
 
               {user && tierInfo && !pricing?.hasFrozen && (
                 <PriceFreezeButton

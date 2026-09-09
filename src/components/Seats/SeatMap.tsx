@@ -291,6 +291,12 @@ export default function SeatMap({ flightId, maxSeats, onSeatsSelected }: Props) 
   useEffect(() => {
     if (user?.savedSeatPreference) setPrefType(user.savedSeatPreference);
   }, [user]);
+  useEffect(() => {
+    if (selected.length > maxSeats) {
+        setSelected((prev) => prev.slice(0, maxSeats));
+    }
+  }, [maxSeats]);
+
 
   const isPreferred = (seat: Seat) => {
     const col = seat.seatNumber.slice(-1);
