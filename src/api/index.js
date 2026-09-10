@@ -427,7 +427,7 @@ export const sendRecommendationFeedback = async (userId, targetId, targetType, f
 
 export const getGeneratedFlights = async (templateId) => {
   try {
-    const res = await fetch(`http://localhost:8080/flight-status/admin/generated/${templateId}`);
+    const res = await fetch(`${BACKEND_URL}/flight-status/admin/generated/${templateId}`);
     return await res.json();
   } catch (error) {
     console.log(error);
@@ -437,7 +437,7 @@ export const getGeneratedFlights = async (templateId) => {
  
 export const regenerateFlights = async (templateId) => {
   try {
-    const res = await fetch(`http://localhost:8080/flight-status/admin/regenerate/${templateId}`, {
+    const res = await fetch(`${BACKEND_URL}/flight-status/admin/regenerate/${templateId}`, {
       method: "POST",
     });
     return await res.json();
@@ -447,3 +447,9 @@ export const regenerateFlights = async (templateId) => {
   }
 };
 
+export const getAllTemplates = async () => {
+   try {
+     const res = await axios.get(`${BACKEND_URL}/flight-status/admin/templates`);
+     return res.data;
+   } catch (error) { console.log(error); return []; }
+};

@@ -23,7 +23,7 @@ import FlaggedReviewsTab from "@/components/Admin/FlaggedReviewsTab";
 import HotelList from "@/components/Hotel/Hotel";
 import {
   addhotel, edithotel, getuserbyemail, createFlightTemplate, getflight,
-  getGeneratedFlights, regenerateFlights,
+  getGeneratedFlights, regenerateFlights, getAllTemplates
 } from "@/api";
 
 const DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
@@ -150,8 +150,7 @@ function RecurringFlightForm() {
   const fetchTemplates = async () => {
     setLoadingTemplates(true);
     try {
-      const res = await fetch("http://localhost:8080/flight-status/admin/templates");
-      const data = await res.json();
+      const data = await getAllTemplates();
       setTemplates(Array.isArray(data) ? data : []);
     } catch { setTemplates([]); }
     setLoadingTemplates(false);
