@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "../ui/button";
 import { useEffect, useState } from "react";
-import { getflight } from "@/api";
+import { getAdminFlights } from "@/api";
 import Loader from "../Loader";
 const FlightList = ({ onSelect }: any) => {
   const [flight, setflight] = useState<any[]>([]);
@@ -17,7 +17,7 @@ const FlightList = ({ onSelect }: any) => {
   useEffect(() => {
     const fetchflight = async () => {
       try {
-        const data = await getflight();
+        const data = await getAdminFlights();
         setflight(data);
       } catch (error) {
         console.error(error);

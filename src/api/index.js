@@ -1,12 +1,14 @@
 import axios from "axios";
 
-const BACKEND_URL = "https://makemytrip-backend-px07.onrender.com";
+// FIX #5: use env var — set NEXT_PUBLIC_BACKEND_URL in .env.local
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
-// ── Auth ─────────────────────────────────────────────────────────────────────
+// ── Auth ──────────────────────────────────────────────────────────────────────
 
+// FIX #4: login via request body — password no longer in URL
 export const login = async (email, password) => {
   try {
-    const res = await axios.post(`${BACKEND_URL}/user/login?email=${email}&password=${password}`);
+    const res = await axios.post(`${BACKEND_URL}/user/login`, { email, password });
     return res.data;
   } catch (error) { throw error; }
 };
@@ -37,19 +39,21 @@ export const editprofile = async (id, firstName, lastName, email, phoneNumber) =
 };
 
 // ── Flights ───────────────────────────────────────────────────────────────────
-// FIX #4: filter out templates on the frontend as well as backend
 
 export const getflight = async () => {
   try {
     const res = await axios.get(`${BACKEND_URL}/flight`);
-    // Filter templates and expired flights client-side as safety net
     return (res.data || []).filter(
       (f) => !f.isTemplate && f.status !== "EXPIRED" && f.status !== "DEPARTED"
     );
-  } catch (error) {
-    console.log(error); // FIX #1: was console.log(data) — data undefined in catch
-    return [];
-  }
+  } catch (error) { console.log(error); return []; }
+};
+
+export const getAdminFlights = async () => {
+  try {
+    const res = await axios.get(`${BACKEND_URL}/admin/flights`);
+    return res.data;
+  } catch (error) { console.log(error); return []; }
 };
 
 export const addflight = async (
@@ -92,7 +96,6 @@ export const addhotel = async (hotelName, location, pricePerNight, availableRoom
   } catch (error) { console.log(error); }
 };
 
-
 export const edithotel = async (id, hotelName, location, pricePerNight, availableRooms, amenities, imageUrls = []) => {
   try {
     const res = await axios.put(`${BACKEND_URL}/admin/hotel/${id}`, {
@@ -102,8 +105,7 @@ export const edithotel = async (id, hotelName, location, pricePerNight, availabl
   } catch (error) { console.log(error); }
 };
 
-
-// ── Bookings — FIX #2: switched from query params to request body ──────────────
+// ── Bookings ──────────────────────────────────────────────────────────────────
 
 export const handleflightbooking = async (userId, flightId, seats, price, selectedSeats = []) => {
   try {
@@ -264,6 +266,28 @@ export const createFlightTemplate = async (templateData) => {
   } catch (error) { throw error; }
 };
 
+export const getAllTemplates = async () => {
+  try {
+    const res = await axios.get(`${BACKEND_URL}/flight-status/admin/templates`);
+    return res.data;
+  } catch (error) { console.log(error); return []; }
+};
+
+// FIX #4 (Section 7): use axios instead of raw fetch — no hardcoded localhost
+export const getGeneratedFlights = async (templateId) => {
+  try {
+    const res = await axios.get(`${BACKEND_URL}/flight-status/admin/generated/${templateId}`);
+    return res.data;
+  } catch (error) { console.log(error); return []; }
+};
+
+export const regenerateFlights = async (templateId) => {
+  try {
+    const res = await axios.post(`${BACKEND_URL}/flight-status/admin/regenerate/${templateId}`);
+    return res.data;
+  } catch (error) { console.log(error); return null; }
+};
+
 // ── Seats ─────────────────────────────────────────────────────────────────────
 
 export const getSeatMap = async (flightId) => {
@@ -280,20 +304,6 @@ export const lockSeats = async (flightId, seatNumbers, userId) => {
   } catch (error) { throw error; }
 };
 
-export const confirmSeats = async (flightId, seatNumbers) => {
-  try {
-    const res = await axios.post(`${BACKEND_URL}/seats/flight/${flightId}/confirm`, { seatNumbers });
-    return res.data;
-  } catch (error) { throw error; }
-};
-
-export const unlockSeats = async (flightId, seatNumbers, userId) => {
-  try {
-    const res = await axios.post(`${BACKEND_URL}/seats/flight/${flightId}/unlock`, { userId, seatNumbers });
-    return res.data;
-  } catch (error) { console.log(error); }
-};
-
 export const generateSeatMap = async (flightId, model) => {
   try {
     const res = await axios.post(`${BACKEND_URL}/seats/flight/${flightId}/generate?model=${model}`);
@@ -306,13 +316,6 @@ export const getRoomTypes = async (hotelId) => {
     const res = await axios.get(`${BACKEND_URL}/seats/hotel/${hotelId}`);
     return res.data;
   } catch (error) { console.log(error); return { roomTypes: [] }; }
-};
-
-export const bookRoomType = async (hotelId, roomType, quantity) => {
-  try {
-    const res = await axios.post(`${BACKEND_URL}/seats/hotel/${hotelId}/book`, { roomType, quantity });
-    return res.data;
-  } catch (error) { throw error; }
 };
 
 export const savePreferences = async (userId, seatPreference, roomPreference) => {
@@ -365,7 +368,6 @@ export const getUserTier = async (userId) => {
     const res = await axios.get(`${BACKEND_URL}/pricing/tier?userId=${userId}`);
     return res.data;
   } catch (error) {
-    console.log(error);
     return { tier: "BASIC", discount: "0%", freezeMinutes: 30, nextTier: "3 qualifying bookings for SILVER" };
   }
 };
@@ -389,13 +391,6 @@ export const markOneNotificationRead = async (notificationId) => {
   try {
     await axios.put(`${BACKEND_URL}/notifications/${notificationId}/read`);
   } catch (error) { console.log(error); }
-};
-
-export const getUnreadNotificationCount = async (userId) => {
-  try {
-    const res = await axios.get(`${BACKEND_URL}/notifications/unread-count?userId=${userId}`);
-    return res.data.count || 0;
-  } catch (error) { return 0; }
 };
 
 // ── Recommendations ───────────────────────────────────────────────────────────
@@ -423,33 +418,4 @@ export const sendRecommendationFeedback = async (userId, targetId, targetType, f
       userId, targetId, targetType, feedback,
     });
   } catch (error) { console.log(error); }
-};
-
-export const getGeneratedFlights = async (templateId) => {
-  try {
-    const res = await fetch(`${BACKEND_URL}/flight-status/admin/generated/${templateId}`);
-    return await res.json();
-  } catch (error) {
-    console.log(error);
-    return [];
-  }
-};
- 
-export const regenerateFlights = async (templateId) => {
-  try {
-    const res = await fetch(`${BACKEND_URL}/flight-status/admin/regenerate/${templateId}`, {
-      method: "POST",
-    });
-    return await res.json();
-  } catch (error) {
-    console.log(error);
-    return null;
-  }
-};
-
-export const getAllTemplates = async () => {
-   try {
-     const res = await axios.get(`${BACKEND_URL}/flight-status/admin/templates`);
-     return res.data;
-   } catch (error) { console.log(error); return []; }
 };
