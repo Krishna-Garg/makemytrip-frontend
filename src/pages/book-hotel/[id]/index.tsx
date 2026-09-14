@@ -1,7 +1,7 @@
 import { useRouter } from "next/router";
 import {
   MapPin, CreditCard, Ticket, Home, AlertCircle,
-  TrendingUp, Lock, Tag,
+  TrendingUp, Tag,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { gethotel, handlehotelbooking, getHotelEffectivePrice, getUserTier } from "@/api";
@@ -19,22 +19,19 @@ import ReviewList from "@/components/Reviews/ReviewList";
 import RoomSelector from "@/components/Seats/RoomSelector";
 import TierBadge from "@/components/Pricing/TierBadge";
 
-// Room type stock images — real photos keyed by type
+// Room type fallback images
 const ROOM_IMAGES: Record<string, string> = {
   STANDARD: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?auto=format&fit=crop&w=800&q=80",
   DELUXE:   "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80",
   SUITE:    "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&w=800&q=80",
 };
 
-const HOTEL_IMAGES = [
-  "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=800&q=80",
-];
+const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80";
 
 interface Hotel {
   _id: string; id: string; hotelName: string; location: string;
   pricePerNight: number; availableRooms: number; amenities: string;
+  imageUrls?: string[];
 }
 
 const TAX_RATE = 0.12;
@@ -48,12 +45,8 @@ const BookHotelPage = () => {
   const user = useSelector((state: any) => state.user.user);
   const [open, setOpen] = useState(false);
   const dispatch = useDispatch();
-
-  // Room selection
   const [selectedRoom, setSelectedRoom] = useState<any | null>(null);
   const [roomPrice, setRoomPrice] = useState<number>(0);
-
-  // Dynamic pricing
   const [pricing, setPricing] = useState<any>(null);
   const [tierInfo, setTierInfo] = useState<any>(null);
 
@@ -82,11 +75,7 @@ const BookHotelPage = () => {
           nextTier: "3 qualifying bookings for SILVER",
         }),
       ]);
-      if (priceData) {
-        setPricing(priceData);
-        // Apply dynamic price as base, room multiplier applied on top
-        setRoomPrice(priceData.finalPrice);
-      }
+      if (priceData) { setPricing(priceData); setRoomPrice(priceData.finalPrice); }
       setTierInfo(tierData);
     };
     fetchPricing();
@@ -98,6 +87,11 @@ const BookHotelPage = () => {
       <p className="text-gray-500">No hotel found for this ID.</p>
     </div>
   );
+
+  // Use hotel.imageUrls from DB, fall back to placeholder if empty
+  const images = hotel.imageUrls && hotel.imageUrls.length > 0
+    ? hotel.imageUrls
+    : [FALLBACK_IMAGE];
 
   const effectiveBasePrice = pricing?.finalPrice || hotel.pricePerNight;
   const roomMultiplier = selectedRoom?.priceMultiplier || 1;
@@ -155,7 +149,6 @@ const BookHotelPage = () => {
               onChange={(e) => setQuantity(Math.max(1, Math.min(parseInt(e.target.value) || 1, hotel.availableRooms)))} />
           </div>
         </div>
-
         <div className="bg-gray-100 rounded-lg p-4 space-y-2 text-sm">
           <h3 className="font-bold flex items-center mb-2">
             <CreditCard className="w-4 h-4 mr-2" />Fare Summary
@@ -195,7 +188,6 @@ const BookHotelPage = () => {
             <span>Total</span><span>₹ {grandTotal.toLocaleString()}</span>
           </div>
         </div>
-
         <Button onClick={handleBooking} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
           Confirm Booking — ₹ {grandTotal.toLocaleString()}
         </Button>
@@ -219,7 +211,6 @@ const BookHotelPage = () => {
 
           {/* Left column */}
           <div className="lg:col-span-2 space-y-6">
-
             <div>
               <h1 className="text-2xl font-bold mb-1">{hotel.hotelName}</h1>
               <div className="flex items-center gap-1 text-gray-500 text-sm">
@@ -227,21 +218,56 @@ const BookHotelPage = () => {
               </div>
             </div>
 
-            {/* Real hotel images */}
+            {/* Hotel images from DB */}
             <div className="grid grid-cols-3 gap-4">
               <div className="col-span-2">
-                <img src={HOTEL_IMAGES[0]} alt={hotel.hotelName}
-                  className="w-full h-80 object-cover rounded-lg" />
+                <img
+                  src={images[0]}
+                  alt={hotel.hotelName}
+                  className="w-full h-80 object-cover rounded-lg"
+                  onError={(e) => (e.currentTarget.src = FALLBACK_IMAGE)}
+                />
               </div>
               <div className="space-y-4">
-                <img src={HOTEL_IMAGES[1]} alt="Hotel room"
-                  className="w-full h-[152px] object-cover rounded-lg" />
-                <img src={HOTEL_IMAGES[2]} alt="Hotel amenity"
-                  className="w-full h-[152px] object-cover rounded-lg" />
+                {images[1] ? (
+                  <img
+                    src={images[1]}
+                    alt="Hotel room"
+                    className="w-full h-[152px] object-cover rounded-lg"
+                    onError={(e) => (e.currentTarget.style.display = "none")}
+                  />
+                ) : (
+                  <div className="w-full h-[152px] bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg" />
+                )}
+                {images[2] ? (
+                  <img
+                    src={images[2]}
+                    alt="Hotel amenity"
+                    className="w-full h-[152px] object-cover rounded-lg"
+                    onError={(e) => (e.currentTarget.style.display = "none")}
+                  />
+                ) : (
+                  <div className="w-full h-[152px] bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg" />
+                )}
               </div>
             </div>
 
-            {/* Room type images */}
+            {/* Additional images if more than 3 uploaded */}
+            {images.length > 3 && (
+              <div className="grid grid-cols-4 gap-3">
+                {images.slice(3).map((url, i) => (
+                  <img
+                    key={i}
+                    src={url}
+                    alt={`Hotel photo ${i + 4}`}
+                    className="w-full h-24 object-cover rounded-lg"
+                    onError={(e) => (e.currentTarget.style.display = "none")}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Room type preview */}
             {selectedRoom && (
               <div className="bg-white rounded-xl shadow-sm p-4">
                 <h3 className="font-semibold mb-3 text-sm">
@@ -295,7 +321,7 @@ const BookHotelPage = () => {
                   </div>
                 </div>
                 <p className="text-xs text-gray-400 px-1">
-                  Cancel any time from your profile dashboard. Refund credited to original payment method.
+                  Cancel any time from your profile dashboard.
                 </p>
               </div>
             </div>
@@ -314,15 +340,13 @@ const BookHotelPage = () => {
                 <MapPin className="w-4 h-4" />{hotel.location}
               </div>
 
-              {/* Dynamic price display */}
               {pricing && (
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Price / night</span>
                     {pricing.multiplier > 1 && (
                       <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <TrendingUp className="w-3 h-3" />
-                        {pricing.multiplierReason}
+                        <TrendingUp className="w-3 h-3" />{pricing.multiplierReason}
                       </span>
                     )}
                   </div>
@@ -342,22 +366,17 @@ const BookHotelPage = () => {
                 </div>
               )}
 
-              {/* Tier badge */}
               {tierInfo && (
                 <TierBadge tier={tierInfo.tier} discount={tierInfo.discount} nextTier={tierInfo.nextTier} />
               )}
 
-              {/* Selected room badge */}
               {selectedRoom && (
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
                   <p className="font-medium text-blue-700">{selectedRoom.type} Room Selected</p>
-                  <p className="text-blue-500 text-xs mt-0.5">
-                    {selectedRoom.priceMultiplier}x multiplier applied
-                  </p>
+                  <p className="text-blue-500 text-xs mt-0.5">{selectedRoom.priceMultiplier}x multiplier applied</p>
                 </div>
               )}
 
-              {/* Quantity */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Rooms</label>
                 <div className="flex items-center gap-3">
@@ -370,19 +389,16 @@ const BookHotelPage = () => {
                 </div>
               </div>
 
-              {/* Price breakdown */}
               <div className="space-y-2 text-sm border-t pt-4">
                 <div className="flex justify-between text-gray-600">
                   <span>₹ {pricePerRoom.toLocaleString()} × {quantity} night{quantity > 1 ? "s" : ""}</span>
                   <span>₹ {baseFare.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
-                  <span>Taxes & GST (12%)</span>
-                  <span>₹ {taxes.toLocaleString()}</span>
+                  <span>Taxes & GST (12%)</span><span>₹ {taxes.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between font-bold text-lg pt-2 border-t">
-                  <span>Total</span>
-                  <span>₹ {grandTotal.toLocaleString()}</span>
+                  <span>Total</span><span>₹ {grandTotal.toLocaleString()}</span>
                 </div>
               </div>
 
