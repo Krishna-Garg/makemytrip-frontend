@@ -22,7 +22,7 @@ const Navbar = () => {
     dispatch(clearUser());
   };
   return (
-    <header className=" backdrop-blur-md py-4 sticky top-0 z-50">
+    <header className=" backdrop-blur-md py-4 sticky top-0 ">
       <div className="container mx-auto px-4 flex items-center justify-between">
         <div className="flex items-center space-x-2 text-white cursor-pointer" onClick={() => router.push("/")}>
           <Plane className="w-8 h-8 text-red-500" />
